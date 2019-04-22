@@ -80,7 +80,12 @@ func current() string {
 }
 func execCommands(dir string, commands []string, logger *log.Logger) bool {
 	curr := current()
-	os.Chdir(dir)
+	e := os.Chdir(dir)
+	if e != nil {
+		fmt.Println(e)
+		return false
+	}
+	fmt.Println(fmt.Sprintf("dir [%s]", dir))
 
 	for _, v := range commands {
 		fmt.Println(fmt.Sprintf("exec [%s]", v))
