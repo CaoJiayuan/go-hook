@@ -98,7 +98,13 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 			return false
 		}
 
-		cmd.Start()
+		cmdErr := cmd.Start()
+		if cmdErr != nil {
+			logger.Println(cmdErr)
+			fmt.Println(cmdErr)
+			return false
+		}
+
 		reader := bufio.NewReader(stdout)
 
 		for {
