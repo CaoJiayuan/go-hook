@@ -200,6 +200,7 @@ func main() {
 			if len(ty) > 0 {
 				s := string(ty)
 				dir := query.Peek("dir")
+				extra := query.Peek("extra")
 				switch s {
 				case "git":
 					q.Push(func(logger *log.Logger) bool {
@@ -207,7 +208,7 @@ func main() {
 					})
 				case "laravel":
 					q.Push(func(logger *log.Logger) bool {
-						return handleLaravelDeploy(dir, logger, query.Peek("extra"))
+						return handleLaravelDeploy(dir, logger, extra)
 					})
 				}
 			}
