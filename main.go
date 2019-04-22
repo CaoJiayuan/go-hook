@@ -83,6 +83,8 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 	os.Chdir(dir)
 
 	for _, v := range commands {
+		fmt.Println(fmt.Sprintf("exec [%s]", v))
+
 		partials := strings.Split(v, " ")
 		var args []string
 		if len(partials) > 1 {
