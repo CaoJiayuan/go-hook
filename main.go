@@ -94,6 +94,7 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 
 		if err != nil {
 			logger.Println(err)
+			fmt.Println(err)
 			return false
 		}
 
@@ -106,6 +107,7 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 				break
 			}
 			logger.Println(line)
+			fmt.Println(line)
 		}
 
 		cmd.Wait()
@@ -122,6 +124,7 @@ func NewQueue() *Queue {
 func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 	if len(dir) > 0 {
 		logger.Println(fmt.Sprintf("git [%s] deploy", dir))
+		fmt.Println(fmt.Sprintf("git [%s] deploy", dir))
 		return execCommands(string(dir), []string{
 			"git pull",
 		}, logger)
@@ -132,6 +135,7 @@ func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 	if len(dir) > 0 {
 		logger.Println(fmt.Sprintf("laravel [%s] deploy", dir))
+		fmt.Println(fmt.Sprintf("laravel [%s] deploy", dir))
 		commands := []string{
 			"git pull",
 			"composer install --ignore-platform-reqs",
@@ -165,7 +169,7 @@ func main() {
 		e <- 1
 	}()
 
-	apiToken := os.Getenv("API_TOKEN")
+	apiToken := "123456"
 
 	err := fasthttp.ListenAndServe(":8181", func(ctx *fasthttp.RequestCtx) {
 		query := ctx.QueryArgs()
