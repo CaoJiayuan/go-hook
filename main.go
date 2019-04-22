@@ -117,6 +117,7 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 		for {
 			line, err2 := reader.ReadString('\n')
 			if err2 != nil || io.EOF == err2 {
+				fmt.Println(err2)
 				break
 			}
 			logger.Println(line)
