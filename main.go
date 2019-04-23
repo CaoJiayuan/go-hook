@@ -196,7 +196,10 @@ func main1() {
 	fmt.Println(os.Getenv("API_TOKEN"))
 }
 
-func sendEmail(dir string, commands []string) {
+func sendEmail(dir string, commands []string) bool {
+	if os.Getenv("SEND_EMAIL") != "1" {
+		return false
+	}
 	from := os.Getenv("SMTP_EMAIL")
 	pass := os.Getenv("SMTP_PASS")
 	host := os.Getenv("SMTP_HOST")
@@ -234,8 +237,10 @@ func sendEmail(dir string, commands []string) {
 	)
 	if err != nil {
 		fmt.Println(err)
+		return false
 	} else {
 		fmt.Println("send success")
+		return true
 	}
 }
 
