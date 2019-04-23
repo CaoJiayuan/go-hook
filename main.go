@@ -13,10 +13,17 @@ import (
 	"time"
 	"log"
 	"github.com/joho/godotenv"
+	"net/smtp"
+	"html/template"
+	"bytes"
 )
 
 var (
 	path string
+)
+
+const (
+	MIME = "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 )
 
 type Job func(logger *log.Logger) bool
@@ -139,9 +146,13 @@ func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 	if len(dir) > 0 {
 		logger.Println(fmt.Sprintf("git [%s] deploy", dir))
 		fmt.Println(fmt.Sprintf("git [%s] deploy", dir))
-		return execCommands(string(dir), []string{
+		commands := []string{
 			"git pull",
-		}, logger)
+		}
+		s := string(dir)
+		result := execCommands(s, commands, logger)
+		go sendEmail(s, commands)
+		return result
 	}
 	return false
 }
@@ -157,24 +168,84 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 		}
 
 		if len(extra) > 0 {
-			commands = append(commands, strings.Split(string(extra), "&")...)
+			commands = append(commands, strings.Split(string(extra), ",")...)
 		}
 
-		return execCommands(string(dir), commands, logger)
+		dirS := string(dir)
+		result := execCommands(dirS, commands, logger)
+		go sendEmail(dirS, commands)
+
+		return result
 	}
 	return false
 }
 
-func main1() {
-	e := make(chan int)
-	q := &Queue{}
+type EmailData struct {
+	Commands []string
+	Server   string
+	Dir      string
+}
 
-	q.Run(e)
+func main1() {
+	file, _ := filepath.Abs(os.Args[0])
+
+	path = filepath.Dir(file)
+
+	fmt.Println(path)
+	godotenv.Load(path + "/.env")
+	fmt.Println(os.Getenv("API_TOKEN"))
+}
+
+func sendEmail(dir string, commands []string) {
+	from := os.Getenv("SMTP_EMAIL")
+	pass := os.Getenv("SMTP_PASS")
+	host := os.Getenv("SMTP_HOST")
+	port := os.Getenv("SMTP_PORT")
+	auth := smtp.PlainAuth(
+		"",
+		from,
+		pass,
+		host,
+	)
+	to := os.Getenv("SMTP_TO")
+
+	var buf bytes.Buffer
+	temp, _ := template.ParseFiles(filepath.Join(path, "email.temp.html"))
+	temp.Execute(&buf, EmailData{
+		Commands: commands,
+		Server:   os.Getenv("SERVER"),
+		Dir:      dir,
+	})
+	msg := "From: " + from + "\r\n" +
+		"To: " + to + "\r\n" +
+		"Subject: Deploy message\r\n" +
+		MIME + "\r\n" +
+		buf.String()
+
+	// Connect to the server, authenticate, set the sender and recipient,
+	// and send the email all in one step.
+	fmt.Println("sending email")
+	err := smtp.SendMail(
+		host+":"+port,
+		auth,
+		from,
+		strings.Split(to, ","),
+		[]byte(msg),
+	)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("send success")
+	}
 }
 
 func main() {
-	path = current()
+	file, _ := filepath.Abs(os.Args[0])
+
+	path = filepath.Dir(file)
 	godotenv.Load(path + "/.env")
+
+	fmt.Println(path)
 	e := make(chan int)
 	q := NewQueue()
 
@@ -184,7 +255,8 @@ func main() {
 		e <- 1
 	}()
 
-	apiToken := "123456"
+	apiToken := os.Getenv("API_TOKEN")
+	fmt.Println(apiToken)
 
 	err := fasthttp.ListenAndServe(":8181", func(ctx *fasthttp.RequestCtx) {
 		query := ctx.QueryArgs()
@@ -196,7 +268,7 @@ func main() {
 		if apiToken != token {
 			fmt.Fprint(ctx, "Access denied")
 			ctx.Response.SetStatusCode(403)
-		} else  {
+		} else {
 			if len(ty) > 0 {
 				s := string(ty)
 				dir := query.Peek("dir")
