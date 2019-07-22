@@ -162,7 +162,6 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 		logger.Println(fmt.Sprintf("laravel [%s] deploy", dir))
 		fmt.Println(fmt.Sprintf("laravel [%s] deploy", dir))
 		commands := []string{
-			"ls -l",
 			"git pull",
 			"composer install --ignore-platform-reqs",
 		}
