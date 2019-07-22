@@ -186,16 +186,6 @@ type EmailData struct {
 	Dir      string
 }
 
-func main1() {
-	file, _ := filepath.Abs(os.Args[0])
-
-	path = filepath.Dir(file)
-
-	fmt.Println(path)
-	godotenv.Load(path + "/.env")
-	fmt.Println(os.Getenv("API_TOKEN"))
-}
-
 func sendEmail(dir string, commands []string) bool {
 	if os.Getenv("SEND_EMAIL") != "1" {
 		return false
