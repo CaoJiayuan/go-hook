@@ -85,6 +85,12 @@ func current() string {
 
 	return path
 }
+
+func outputAndLog(logger *log.Logger, output string){
+	fmt.Println(output)
+	logger.Println(output)
+}
+
 func execCommands(dir string, commands []string, logger *log.Logger) bool {
 	curr := current()
 	e := os.Chdir(dir)
@@ -92,10 +98,10 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 		fmt.Println(e)
 		return false
 	}
-	fmt.Println(fmt.Sprintf("dir [%s]", dir))
+	outputAndLog(logger, fmt.Sprintf("dir [%s]", dir))
 
 	for _, v := range commands {
-		fmt.Println(fmt.Sprintf("exec [%s]", v))
+		outputAndLog(logger, fmt.Sprintf("exec [%s]", v))
 
 		partials := strings.Split(v, " ")
 		var args []string
@@ -151,7 +157,7 @@ func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 		}
 		s := string(dir)
 		result := execCommands(s, commands, logger)
-		go sendEmail(s, commands)
+		go sendEmail(s, commands, logger)
 		return result
 	}
 	return false
@@ -179,7 +185,7 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 
 		dirS := string(dir)
 		result := execCommands(dirS, commands, logger)
-		go sendEmail(dirS, commands)
+		go sendEmail(dirS, commands, logger)
 
 		return result
 	}
@@ -192,7 +198,7 @@ type EmailData struct {
 	Dir      string
 }
 
-func sendEmail(dir string, commands []string) bool {
+func sendEmail(dir string, commands []string, logger *log.Logger) bool {
 	if os.Getenv("SEND_EMAIL") != "1" {
 		return false
 	}
@@ -212,7 +218,7 @@ func sendEmail(dir string, commands []string) bool {
 	temp, tErr := template.ParseFiles(filepath.Join(path, "email.temp.html"))
 
 	if tErr != nil {
-		fmt.Println("sended email error, no mail template")
+		outputAndLog(logger, "sended email error, no mail template")
 		return false
 	}
 
@@ -229,7 +235,7 @@ func sendEmail(dir string, commands []string) bool {
 
 	// Connect to the server, authenticate, set the sender and recipient,
 	// and send the email all in one step.
-	fmt.Println("sending email")
+	outputAndLog(logger, "sending email")
 	err := smtp.SendMail(
 		host+":"+port,
 		auth,
@@ -239,9 +245,10 @@ func sendEmail(dir string, commands []string) bool {
 	)
 	if err != nil {
 		fmt.Println(err)
+		logger.Println(err)
 		return false
 	} else {
-		fmt.Println("send success")
+		outputAndLog(logger, "send success")
 		return true
 	}
 }
