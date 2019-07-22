@@ -203,7 +203,13 @@ func sendEmail(dir string, commands []string) bool {
 	to := os.Getenv("SMTP_TO")
 
 	var buf bytes.Buffer
-	temp, _ := template.ParseFiles(filepath.Join(path, "email.temp.html"))
+	temp, tErr := template.ParseFiles(filepath.Join(path, "email.temp.html"))
+
+	if tErr != nil {
+		fmt.Println("sended email error, no mail template")
+		return false
+	}
+
 	temp.Execute(&buf, EmailData{
 		Commands: commands,
 		Server:   os.Getenv("SERVER"),
