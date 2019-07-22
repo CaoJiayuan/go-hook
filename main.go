@@ -161,9 +161,16 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 	if len(dir) > 0 {
 		logger.Println(fmt.Sprintf("laravel [%s] deploy", dir))
 		fmt.Println(fmt.Sprintf("laravel [%s] deploy", dir))
+
+		composerPath := os.Getenv("COMPOSER_PATH")
+
+		if len(composerPath) < 1 {
+			composerPath = "/usr/local/bin/composer"
+		}
+
 		commands := []string{
 			"git pull",
-			"php $(which composer) install --ignore-platform-reqs",
+			"composer install --ignore-platform-reqs",
 		}
 
 		if len(extra) > 0 {
