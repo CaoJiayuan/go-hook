@@ -170,7 +170,7 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 
 		commands := []string{
 			"git pull",
-			"composer install --ignore-platform-reqs",
+			"php " + composerPath + " install --ignore-platform-reqs",
 		}
 
 		if len(extra) > 0 {
