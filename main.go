@@ -250,7 +250,7 @@ func main() {
 	path = filepath.Dir(file)
 	godotenv.Load(path + "/.env")
 
-	fmt.Println(path)
+	fmt.Println(fmt.Sprintf("Loading .env in [%s]", path))
 	e := make(chan int)
 	q := NewQueue()
 
@@ -261,9 +261,15 @@ func main() {
 	}()
 
 	apiToken := os.Getenv("API_TOKEN")
-	fmt.Println(apiToken)
 
-	err := fasthttp.ListenAndServe(":8181", func(ctx *fasthttp.RequestCtx) {
+	port := os.Getenv("HOOT_PORT")
+	if len(port) < 1 {
+		port = "8181"
+	}
+
+	fmt.Println(fmt.Sprintf("Hook server started [0.0.0.0:%s], api token [%s]", port, apiToken))
+
+	err := fasthttp.ListenAndServe(":" + port, func(ctx *fasthttp.RequestCtx) {
 		query := ctx.QueryArgs()
 
 		ty := query.Peek("type")
