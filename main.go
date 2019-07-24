@@ -192,6 +192,30 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 	return false
 }
 
+func handleNpmDeploy(dir []byte, logger *log.Logger, env []byte, extra []byte) bool {
+	if len(dir) > 0 {
+		outputAndLog(logger, fmt.Sprintf("npm [%s] deploy", dir))
+		if len(env) == 0 {
+			env = []byte("uat")
+		}
+		commands := []string{
+			"git pull",
+			"cnpm install",
+			"npm run " + string(env),
+		}
+
+		if len(extra) > 0 {
+			commands = append(commands, strings.Split(string(extra), ",")...)
+		}
+
+		dirS := string(dir)
+		result := execCommands(dirS, commands, logger)
+		go sendEmail(dirS, commands, logger)
+		return result
+	}
+	return false
+}
+
 type EmailData struct {
 	Commands []string
 	Server   string
@@ -301,6 +325,11 @@ func main() {
 				case "laravel":
 					q.Push(func(logger *log.Logger) bool {
 						return handleLaravelDeploy(dir, logger, extra)
+					})
+				case "npm":
+					env := query.Peek("env")
+					q.Push(func(logger *log.Logger) bool {
+						return handleNpmDeploy(dir, logger, env, extra)
 					})
 				}
 			}
