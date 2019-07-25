@@ -200,7 +200,7 @@ func handleNpmDeploy(dir []byte, logger *log.Logger, env []byte, extra []byte) b
 		}
 		commands := []string{
 			"git pull",
-			"cnpm install",
+			"npm install --unsafe-perm",
 			"npm run " + string(env),
 		}
 
