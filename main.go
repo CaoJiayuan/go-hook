@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strings"
 	"fmt"
-	"io"
 	"bufio"
 	"sync"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"net/smtp"
 	"html/template"
 	"bytes"
+	"io"
 )
 
 var (
@@ -129,14 +129,15 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 
 		for {
 			line, err2 := reader.ReadString('\n')
+			if io.EOF == err2 {
+				break
+			}
 			if err2 != nil  {
 				fmt.Println(err2)
 				logger.Println(err2)
 				break
 			}
-			if io.EOF == err2 {
-				break
-			}
+
 			logger.Println(line)
 			fmt.Println(line)
 		}
