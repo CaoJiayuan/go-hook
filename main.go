@@ -11,11 +11,13 @@ import (
 	"sync"
 	"time"
 	"log"
-	"github.com/joho/godotenv"
 	"net/smtp"
 	"html/template"
 	"bytes"
 	"io"
+	"github.com/sevlyar/go-daemon"
+	"github.com/joho/godotenv"
+	"flag"
 )
 
 var (
@@ -25,6 +27,8 @@ var (
 const (
 	MIME = "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 )
+
+var	sLogger *log.Logger
 
 type Job func(logger *log.Logger) bool
 
@@ -51,11 +55,9 @@ func (q *Queue) Shift() (j Job) {
 	return
 }
 
-func (q *Queue) Run(exit chan int) {
+func (q *Queue) Run(exit chan int, logger *log.Logger) {
 	go func() {
 		t := time.NewTicker(time.Millisecond * 200)
-		file, _ := os.OpenFile(path+"/deploy.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0775)
-		logger := log.New(file, "", log.LstdFlags)
 		for {
 			select {
 			case <-t.C:
@@ -80,13 +82,28 @@ func (q *Queue) handle(logger *log.Logger) {
 	}
 }
 
+func getLogger(path string) *log.Logger {
+	if sLogger != nil {
+		return sLogger
+	}
+	file, err := os.OpenFile(path + "/deploy.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0775)
+
+	if err != nil {
+		 fmt.Println(err)
+	}
+
+	sLogger := log.New(file, "", log.LstdFlags)
+
+	return sLogger
+}
+
 func current() string {
 	path, _ := filepath.Abs(".")
 
 	return path
 }
 
-func outputAndLog(logger *log.Logger, output string){
+func outputAndLog(logger *log.Logger, output interface{}){
 	fmt.Println(output)
 	logger.Println(output)
 }
@@ -282,17 +299,47 @@ func sendEmail(dir string, commands []string, logger *log.Logger) bool {
 	}
 }
 
-func main() {
-	file, _ := filepath.Abs(os.Args[0])
+func getPidFile() string {
+	pidFile := os.Getenv("PID_FILE")
 
-	path = filepath.Dir(file)
-	godotenv.Load(path + "/.env")
+	if len(pidFile) < 1 {
+		pidFile = "/var/run/go-hook.pid"
+	}
 
-	fmt.Println(fmt.Sprintf("Loading .env in [%s]", path))
+	return pidFile
+}
+
+func daemonize(logger *log.Logger, path string) {
+	pidFile := getPidFile()
+
+	ctx := &daemon.Context{
+		PidFileName: pidFile,
+		PidFilePerm: 0644,
+		LogFilePerm: 0640,
+		WorkDir:     current(),
+		Umask:       027,
+	}
+
+	d, err := ctx.Reborn()
+	if err != nil {
+		outputAndLog(logger, "daemon process can not run")
+		outputAndLog(logger, err)
+		return
+	}
+	if d != nil {
+		return
+	}
+	defer ctx.Release()
+	start(path)
+}
+
+func start(dir string)  {
+	logger := getLogger(dir)
+	outputAndLog(logger, fmt.Sprintf("Hook start in [%s]", dir))
 	e := make(chan int)
 	q := NewQueue()
 
-	q.Run(e)
+	q.Run(e, logger)
 
 	defer func() {
 		e <- 1
@@ -305,7 +352,7 @@ func main() {
 		port = "8181"
 	}
 
-	fmt.Println(fmt.Sprintf("Hook server started [0.0.0.0:%s], api token [%s]", port, apiToken))
+	outputAndLog(logger, fmt.Sprintf("Hook server started [0.0.0.0:%s], api token [%s]", port, apiToken))
 
 	err := fasthttp.ListenAndServe(":" + port, func(ctx *fasthttp.RequestCtx) {
 		query := ctx.QueryArgs()
@@ -346,4 +393,29 @@ func main() {
 		e <- 1
 		panic(err)
 	}
+}
+
+func main() {
+
+	daemon := flag.Bool("d", false, "daemonize run")
+
+	flag.Parse()
+
+	fmt.Println(fmt.Sprintf("%x", daemon))
+	return
+
+	file, _ := filepath.Abs(os.Args[0])
+
+	path = filepath.Dir(file)
+
+	godotenv.Load(path + "/.env")
+
+	start(path)
+}
+
+func main1() {
+	file, _ := filepath.Abs(os.Args[0])
+	path = filepath.Dir(file)
+	godotenv.Load(path + "/.env")
+	daemonize(getLogger(path), path)
 }
