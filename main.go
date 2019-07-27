@@ -418,6 +418,26 @@ func start(logger *log.Logger, dir string)  {
 	}
 }
 
+func startProcess(daemon bool, logger *log.Logger)  {
+	if daemon {
+		daemonize(logger, path)
+	} else  {
+		start(logger, path)
+	}
+}
+
+func stopProcess() error {
+	pid, err := getPid()
+	if pid > 0 {
+		syscall.Kill(pid, syscall.SIGTERM)
+		syscall.Unlink(getPidFile())
+		fmt.Println(fmt.Sprintf("Hook process[%d] killed", pid))
+	} else {
+		fmt.Println(err)
+	}
+	return err
+}
+
 func main() {
 	d := flag.Bool("d", false, "run as daemon")
 	flag.Parse()
@@ -444,11 +464,11 @@ func main() {
 
 	switch cmd {
 	case "start":
-		if daemon {
-			daemonize(logger, path)
-		} else  {
-			start(logger, path)
-		}
+		startProcess(daemon, logger)
+		break
+	case "restart":
+		stopProcess()
+		startProcess(daemon, logger)
 		break
 	case "stop":
 		pid, err := getPid()
