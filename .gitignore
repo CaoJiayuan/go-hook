@@ -3,3 +3,4 @@ deploy.log
 .idea
 main
 build
+.DS_Store
