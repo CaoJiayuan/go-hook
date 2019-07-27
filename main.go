@@ -18,6 +18,9 @@ import (
 	"github.com/sevlyar/go-daemon"
 	"github.com/joho/godotenv"
 	"flag"
+	"io/ioutil"
+	"strconv"
+	"syscall"
 )
 
 var (
@@ -86,7 +89,14 @@ func getLogger(path string) *log.Logger {
 	if sLogger != nil {
 		return sLogger
 	}
-	file, err := os.OpenFile(path + "/deploy.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0775)
+
+	logFile := os.Getenv("HOOK_LOG_FILE")
+
+	if len(logFile) < 1 {
+		logFile = path + "/deploy.log"
+	}
+
+	file, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0775)
 
 	if err != nil {
 		 fmt.Println(err)
@@ -300,13 +310,26 @@ func sendEmail(dir string, commands []string, logger *log.Logger) bool {
 }
 
 func getPidFile() string {
-	pidFile := os.Getenv("PID_FILE")
+	pidFile := os.Getenv("HOOK_PID_FILE")
 
 	if len(pidFile) < 1 {
 		pidFile = "/var/run/go-hook.pid"
 	}
 
 	return pidFile
+}
+func getPid() (int, error) {
+	data, err := ioutil.ReadFile(getPidFile())
+
+	if err != nil {
+		 return 0, err
+	}
+	pid, e :=  strconv.Atoi(string(data))
+
+	if e != nil {
+		return 0, e
+	}
+	return pid, nil
 }
 
 func daemonize(logger *log.Logger, path string) {
@@ -322,19 +345,19 @@ func daemonize(logger *log.Logger, path string) {
 
 	d, err := ctx.Reborn()
 	if err != nil {
-		outputAndLog(logger, "daemon process can not run")
+		outputAndLog(logger, "Daemon process can not run")
 		outputAndLog(logger, err)
 		return
 	}
 	if d != nil {
+		outputAndLog(logger, "Hook process running at daemon mode")
 		return
 	}
 	defer ctx.Release()
-	start(path)
+	start(logger, path)
 }
 
-func start(dir string)  {
-	logger := getLogger(dir)
+func start(logger *log.Logger, dir string)  {
 	outputAndLog(logger, fmt.Sprintf("Hook start in [%s]", dir))
 	e := make(chan int)
 	q := NewQueue()
@@ -396,26 +419,54 @@ func start(dir string)  {
 }
 
 func main() {
-
-	daemon := flag.Bool("d", false, "daemonize run")
-
+	d := flag.Bool("d", false, "run as daemon")
 	flag.Parse()
-
-	fmt.Println(fmt.Sprintf("%x", daemon))
-	return
-
 	file, _ := filepath.Abs(os.Args[0])
-
+	daemon := *d
 	path = filepath.Dir(file)
+
+	var cmd = "start"
+	if len(os.Args) > 1 {
+		if os.Args[1] == "-d" {
+			cmd = "start"
+			daemon = true
+		} else {
+			cmd = os.Args[1]
+			if len(os.Args) > 2 {
+				daemon = os.Args[2] == "-d"
+			}
+		}
+	}
 
 	godotenv.Load(path + "/.env")
 
-	start(path)
-}
+	logger := getLogger(path)
 
-func main1() {
-	file, _ := filepath.Abs(os.Args[0])
-	path = filepath.Dir(file)
-	godotenv.Load(path + "/.env")
-	daemonize(getLogger(path), path)
+	switch cmd {
+	case "start":
+		if daemon {
+			daemonize(logger, path)
+		} else  {
+			start(logger, path)
+		}
+		break
+	case "stop":
+		pid, err := getPid()
+		if pid > 0 {
+			syscall.Kill(pid, syscall.SIGTERM)
+			syscall.Unlink(getPidFile())
+			fmt.Println(fmt.Sprintf("Hook process[%d] killed", pid))
+		} else {
+			fmt.Println(err)
+		}
+		break
+	case "pid":
+		pid, err := getPid()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(fmt.Sprintf("Hook process running at pid [%d]", pid))
+		}
+	}
+
 }
