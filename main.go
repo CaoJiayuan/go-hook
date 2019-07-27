@@ -370,7 +370,7 @@ func start(logger *log.Logger, dir string)  {
 
 	apiToken := os.Getenv("API_TOKEN")
 
-	port := os.Getenv("HOOT_PORT")
+	port := os.Getenv("HOOK_PORT")
 	if len(port) < 1 {
 		port = "8181"
 	}
