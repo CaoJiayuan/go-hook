@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"syscall"
+	"github.com/CaoJiayuan/goutilities/file"
 )
 
 var (
@@ -205,17 +206,37 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 		if len(composerPath) < 1 {
 			composerPath = "/usr/local/bin/composer"
 		}
+		dirS := string(dir)
 
-		commands := []string{
-			"git pull",
-			"php " + composerPath + " install --ignore-platform-reqs",
+
+		beforeHook := filepath.Join(dirS, "before_hook.sh")
+		be, _ := file.PathExists(beforeHook)
+
+		var commands []string
+
+		if be {
+			commands = []string{
+				beforeHook,
+				"git pull",
+				"php " + composerPath + " install --ignore-platform-reqs",
+			}
+		} else  {
+			commands = []string{
+				"git pull",
+				"php " + composerPath + " install --ignore-platform-reqs",
+			}
+		}
+
+		afterHook := filepath.Join(dirS, "after_hook.sh")
+		ae, _ := file.PathExists(afterHook)
+		if ae {
+			commands = append(commands, afterHook)
 		}
 
 		if len(extra) > 0 {
 			commands = append(commands, strings.Split(string(extra), ",")...)
 		}
 
-		dirS := string(dir)
 		result := execCommands(dirS, commands, logger)
 		go sendEmail(dirS, commands, logger)
 
