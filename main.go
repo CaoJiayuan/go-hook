@@ -359,9 +359,8 @@ func daemonize(logger *log.Logger, path string) {
 	ctx := &daemon.Context{
 		PidFileName: pidFile,
 		PidFilePerm: 0644,
-		LogFilePerm: 0640,
+		LogFilePerm: 0644,
 		WorkDir:     current(),
-		Umask:       027,
 	}
 
 	d, err := ctx.Reborn()
@@ -426,6 +425,13 @@ func start(logger *log.Logger, dir string)  {
 					env := query.Peek("env")
 					q.Push(func(logger *log.Logger) bool {
 						return handleNpmDeploy(dir, logger, env, extra)
+					})
+				case "test":
+					q.Push(func(logger *log.Logger) bool {
+						execCommands("/Users/caojiayuan/go/src", []string{
+							string(extra),
+						}, logger)
+						return true
 					})
 				}
 			}
