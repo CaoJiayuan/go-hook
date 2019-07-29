@@ -426,13 +426,6 @@ func start(logger *log.Logger, dir string)  {
 					q.Push(func(logger *log.Logger) bool {
 						return handleNpmDeploy(dir, logger, env, extra)
 					})
-				case "test":
-					q.Push(func(logger *log.Logger) bool {
-						execCommands("/Users/caojiayuan/go/src", []string{
-							string(extra),
-						}, logger)
-						return true
-					})
 				}
 			}
 			fmt.Fprint(ctx, "OK")
