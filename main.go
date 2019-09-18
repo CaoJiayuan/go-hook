@@ -196,6 +196,35 @@ func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 	return false
 }
 
+func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
+	if len(dir) > 0 {
+		logger.Println(fmt.Sprintf("git [%s] compose", dir))
+		fmt.Println(fmt.Sprintf("git [%s] compose", dir))
+		var commands = []string{}
+
+		if len(service) > 0 {
+			srv := string(service)
+			commands = []string{
+				"docker-compose pull " + srv,
+				"docker-compose stop " + srv,
+				"docker-compose rm --force " + srv,
+			}
+		} else {
+            commands = []string{
+				"docker-compose pull",
+				"docker-compose down",
+			}
+        }
+		commands = append(commands, "docker-compose up -d")
+		s := string(dir)
+		result := execCommands(s, commands, logger)
+		go sendEmail(s, commands, logger)
+		return result
+	}
+	return false
+}
+
+
 func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 	if len(dir) > 0 {
 		logger.Println(fmt.Sprintf("laravel [%s] deploy", dir))
@@ -426,6 +455,11 @@ func start(logger *log.Logger, dir string)  {
 					q.Push(func(logger *log.Logger) bool {
 						return handleNpmDeploy(dir, logger, env, extra)
 					})
+				case "compose":
+					service := query.Peek("service")
+					q.Push(func(logger *log.Logger) bool {
+						return handleComposeDeploy(dir, logger, service)
+					})	
 				}
 			}
 			fmt.Fprint(ctx, "OK")
