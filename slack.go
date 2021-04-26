@@ -13,16 +13,17 @@ var slackApi *slack.Client
 
 var slackChannel string
 
-func init() {
+func initSlack() {
 	slackChannel = os.Getenv("SLACK_CHANNEL")
 
 	slackToken := os.Getenv("SLACK_TOKEN")
+	fmt.Printf("slack init [%s] [%s]", slackChannel, slackToken)
 	if slackToken != "" && slackChannel != "" {
 		slackApi = slack.New(slackToken)
 	}
 }
 
-func PushSlackf(format string, args ...interface{}) chan struct{} {
+func PushSlackf(format string, logger *log.Logger, args ...interface{}) chan struct{} {
 	done := make(chan struct{}, 1)
 	go func() {
 		if slackApi == nil {
@@ -36,18 +37,18 @@ func PushSlackf(format string, args ...interface{}) chan struct{} {
 
 		blocks := slack.MsgOptionBlocks(block)
 
-		_, _, resp, e := slackApi.SendMessage(slackChannel, slack.MsgOptionText("", false), blocks)
+		_, _, e := slackApi.PostMessage(slackChannel, slack.MsgOptionText("", false), blocks)
 
 		if e != nil {
-			log.Println(e, resp)
+			outputAndLog(logger, e)
 		}
 		done <- struct{}{}
 	}()
 	return done
 }
 
-func DeploySuccessSlack(dir string, commands []string) chan struct{} {
+func DeploySuccessSlack(dir string, commands []string, logger *log.Logger) chan struct{} {
 	server := os.Getenv("SERVER")
 
-	return PushSlackf("*`%s` 部署成功* :stars: \n\n> 应用 `%s` \n\n ```%s```", server, dir, strings.Join(commands, "\n"))
+	return PushSlackf("*`%s` 部署成功* :stars: \n\n> 应用 `%s` \n\n ```%s```", logger, server, dir, strings.Join(commands, "\n"))
 }

@@ -192,6 +192,7 @@ func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 		s := string(dir)
 		result := execCommands(s, commands, logger)
 		go sendEmail(s, commands, logger)
+		DeploySuccessSlack(s, commands, logger)
 		return result
 	}
 	return false
@@ -220,6 +221,7 @@ func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 		s := string(dir)
 		result := execCommands(s, commands, logger)
 		go sendEmail(s, commands, logger)
+		<-DeploySuccessSlack(s, commands, logger)
 		return result
 	}
 	return false
@@ -267,7 +269,7 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 
 		result := execCommands(dirS, commands, logger)
 		go sendEmail(dirS, commands, logger)
-
+		DeploySuccessSlack(dirS, commands, logger)
 		return result
 	}
 	return false
@@ -491,6 +493,11 @@ func stopProcess() error {
 	return err
 }
 
+func WorkDir() string {
+	file, _ := filepath.Abs(os.Args[0])
+	return filepath.Dir(file)
+}
+
 func main() {
 	d := flag.Bool("d", false, "run as daemon")
 	flag.Parse()
@@ -515,6 +522,7 @@ func main() {
 
 	logger := getLogger(path)
 
+	initSlack()
 	switch cmd {
 	case "start":
 		startProcess(daemon, logger)
