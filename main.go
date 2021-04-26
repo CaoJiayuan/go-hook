@@ -1,27 +1,28 @@
 package main
 
 import (
-	"github.com/valyala/fasthttp"
-	"os"
-	"path/filepath"
-	"os/exec"
-	"strings"
-	"fmt"
 	"bufio"
-	"sync"
-	"time"
+	"bytes"
+	"flag"
+	"fmt"
+	"html/template"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/smtp"
-	"html/template"
-	"bytes"
-	"io"
-	"github.com/sevlyar/go-daemon"
-	"github.com/joho/godotenv"
-	"flag"
-	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"syscall"
-	"github.com/CaoJiayuan/goutilities/file"
+	"time"
+
+	"github.com/enorith/supports/file"
+	"github.com/joho/godotenv"
+	"github.com/sevlyar/go-daemon"
+	"github.com/valyala/fasthttp"
 )
 
 var (
@@ -32,7 +33,7 @@ const (
 	MIME = "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 )
 
-var	sLogger *log.Logger
+var sLogger *log.Logger
 
 type Job func(logger *log.Logger) bool
 
@@ -100,7 +101,7 @@ func getLogger(path string) *log.Logger {
 	file, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0775)
 
 	if err != nil {
-		 fmt.Println(err)
+		fmt.Println(err)
 	}
 
 	sLogger := log.New(file, "", log.LstdFlags)
@@ -114,7 +115,7 @@ func current() string {
 	return path
 }
 
-func outputAndLog(logger *log.Logger, output interface{}){
+func outputAndLog(logger *log.Logger, output interface{}) {
 	fmt.Println(output)
 	logger.Println(output)
 }
@@ -160,7 +161,7 @@ func execCommands(dir string, commands []string, logger *log.Logger) bool {
 			if io.EOF == err2 {
 				break
 			}
-			if err2 != nil  {
+			if err2 != nil {
 				fmt.Println(err2)
 				logger.Println(err2)
 				break
@@ -210,11 +211,11 @@ func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 				"docker-compose rm --force " + srv,
 			}
 		} else {
-            commands = []string{
+			commands = []string{
 				"docker-compose pull",
 				"docker-compose down",
 			}
-        }
+		}
 		commands = append(commands, "docker-compose up -d")
 		s := string(dir)
 		result := execCommands(s, commands, logger)
@@ -223,7 +224,6 @@ func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 	}
 	return false
 }
-
 
 func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 	if len(dir) > 0 {
@@ -237,7 +237,6 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 		}
 		dirS := string(dir)
 
-
 		beforeHook := filepath.Join(dirS, "before_hook.sh")
 		be, _ := file.PathExists(beforeHook)
 
@@ -249,7 +248,7 @@ func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 				"git pull",
 				"php " + composerPath + " install --ignore-platform-reqs",
 			}
-		} else  {
+		} else {
 			commands = []string{
 				"git pull",
 				"php " + composerPath + " install --ignore-platform-reqs",
@@ -372,9 +371,9 @@ func getPid() (int, error) {
 	data, err := ioutil.ReadFile(getPidFile())
 
 	if err != nil {
-		 return 0, err
+		return 0, err
 	}
-	pid, e :=  strconv.Atoi(string(data))
+	pid, e := strconv.Atoi(string(data))
 
 	if e != nil {
 		return 0, e
@@ -406,7 +405,7 @@ func daemonize(logger *log.Logger, path string) {
 	start(logger, path)
 }
 
-func start(logger *log.Logger, dir string)  {
+func start(logger *log.Logger, dir string) {
 	outputAndLog(logger, fmt.Sprintf("Hook start in [%s]", dir))
 	e := make(chan int)
 	q := NewQueue()
@@ -426,7 +425,7 @@ func start(logger *log.Logger, dir string)  {
 
 	outputAndLog(logger, fmt.Sprintf("Hook server started [0.0.0.0:%s], api token [%s]", port, apiToken))
 
-	err := fasthttp.ListenAndServe(":" + port, func(ctx *fasthttp.RequestCtx) {
+	err := fasthttp.ListenAndServe(":"+port, func(ctx *fasthttp.RequestCtx) {
 		query := ctx.QueryArgs()
 
 		ty := query.Peek("type")
@@ -459,7 +458,7 @@ func start(logger *log.Logger, dir string)  {
 					service := query.Peek("service")
 					q.Push(func(logger *log.Logger) bool {
 						return handleComposeDeploy(dir, logger, service)
-					})	
+					})
 				}
 			}
 			fmt.Fprint(ctx, "OK")
@@ -472,10 +471,10 @@ func start(logger *log.Logger, dir string)  {
 	}
 }
 
-func startProcess(daemon bool, logger *log.Logger)  {
+func startProcess(daemon bool, logger *log.Logger) {
 	if daemon {
 		daemonize(logger, path)
-	} else  {
+	} else {
 		start(logger, path)
 	}
 }
