@@ -218,6 +218,7 @@ func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 			}
 		}
 		commands = append(commands, "docker-compose up -d")
+		commands = append(commands, "docker system prune --force")
 		s := string(dir)
 		result := execCommands(s, commands, logger)
 		go sendEmail(s, commands, logger)
