@@ -23,7 +23,7 @@ func initSlack() {
 	}
 }
 
-func PushSlackf(format string, logger *log.Logger, args ...interface{}) chan struct{} {
+func PushSlackf(format string, logger *log.Logger, notifyMsg string, args ...interface{}) chan struct{} {
 	done := make(chan struct{}, 1)
 	go func() {
 		if slackApi == nil {
@@ -37,7 +37,7 @@ func PushSlackf(format string, logger *log.Logger, args ...interface{}) chan str
 
 		blocks := slack.MsgOptionBlocks(block)
 
-		_, _, e := slackApi.PostMessage(slackChannel, slack.MsgOptionText("", false), blocks)
+		_, _, e := slackApi.PostMessage(slackChannel, slack.MsgOptionText(notifyMsg, false), blocks)
 
 		if e != nil {
 			outputAndLog(logger, e)
@@ -50,5 +50,7 @@ func PushSlackf(format string, logger *log.Logger, args ...interface{}) chan str
 func DeploySuccessSlack(dir string, commands []string, logger *log.Logger) chan struct{} {
 	server := os.Getenv("SERVER")
 
-	return PushSlackf("*`%s` 部署成功* :stars: \n\n> 应用 `%s` \n\n ```%s```", logger, server, dir, strings.Join(commands, "\n"))
+	return PushSlackf("*`%s` 部署成功* :stars: \n\n> 应用 `%s` \n\n ```%s```", logger,
+		fmt.Sprintf("[%s] 部署成功 (%s)", server, dir),
+		server, dir, strings.Join(commands, "\n"))
 }
