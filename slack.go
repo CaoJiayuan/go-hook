@@ -47,10 +47,14 @@ func PushSlackf(format string, logger *log.Logger, notifyMsg string, args ...int
 	return done
 }
 
-func DeploySuccessSlack(dir string, commands []string, logger *log.Logger) chan struct{} {
+func DeploySuccessSlack(dir string, commands []string, logger *log.Logger, service ...string) chan struct{} {
 	server := os.Getenv("SERVER")
 
+	var s string
+	if len(service) > 0 {
+		s = fmt.Sprintf(": %s", service[0])
+	}
 	return PushSlackf("*`%s` 部署成功* :stars: \n\n> 应用 `%s` \n\n ```%s```", logger,
-		fmt.Sprintf("[%s] 部署成功 (%s)", server, dir),
+		fmt.Sprintf("[%s] 部署成功 (%s%s)", server, dir, s),
 		server, dir, strings.Join(commands, "\n"))
 }

@@ -527,27 +527,24 @@ func main() {
 	switch cmd {
 	case "start":
 		startProcess(daemon, logger)
-		break
 	case "restart":
 		stopProcess()
 		startProcess(daemon, logger)
-		break
 	case "stop":
 		pid, err := getPid()
 		if pid > 0 {
 			syscall.Kill(pid, syscall.SIGTERM)
 			syscall.Unlink(getPidFile())
-			fmt.Println(fmt.Sprintf("Hook process[%d] killed", pid))
+			fmt.Printf("Hook process[%d] killed\n", pid)
 		} else {
 			fmt.Println(err)
 		}
-		break
 	case "pid":
 		pid, err := getPid()
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Println(fmt.Sprintf("Hook process running at pid [%d]", pid))
+			fmt.Printf("Hook process running at pid [%d]\n", pid)
 		}
 	}
 
