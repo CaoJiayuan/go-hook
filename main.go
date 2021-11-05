@@ -222,7 +222,7 @@ func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 		s := string(dir)
 		result := execCommands(s, commands, logger)
 		go sendEmail(s, commands, logger)
-		<-DeploySuccessSlack(s, commands, logger)
+		<-DeploySuccessSlack(s, commands, logger, string(service))
 		return result
 	}
 	return false
@@ -409,7 +409,7 @@ func daemonize(logger *log.Logger, path string) {
 }
 
 func start(logger *log.Logger, dir string) {
-	outputAndLog(logger, fmt.Sprintf("Hook start in [%s]", dir))
+	outputAndLog(logger, fmt.Sprintf("Hook start at [%s]", dir))
 	e := make(chan int)
 	q := NewQueue()
 
@@ -426,7 +426,7 @@ func start(logger *log.Logger, dir string) {
 		port = "8181"
 	}
 
-	outputAndLog(logger, fmt.Sprintf("Hook server started [0.0.0.0:%s], api token [%s]", port, apiToken))
+	outputAndLog(logger, fmt.Sprintf("Hook service started [0.0.0.0:%s], api token [%s]", port, apiToken))
 
 	err := fasthttp.ListenAndServe(":"+port, func(ctx *fasthttp.RequestCtx) {
 		query := ctx.QueryArgs()

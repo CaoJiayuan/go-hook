@@ -17,7 +17,7 @@ func initSlack() {
 	slackChannel = os.Getenv("SLACK_CHANNEL")
 
 	slackToken := os.Getenv("SLACK_TOKEN")
-	fmt.Printf("slack init [%s] [%s]", slackChannel, slackToken)
+	fmt.Printf("slack init [%s] [%s]\n", slackChannel, slackToken)
 	if slackToken != "" && slackChannel != "" {
 		slackApi = slack.New(slackToken)
 	}
@@ -51,7 +51,7 @@ func DeploySuccessSlack(dir string, commands []string, logger *log.Logger, servi
 	server := os.Getenv("SERVER")
 
 	var s string
-	if len(service) > 0 {
+	if len(service) > 0 && service[0] != "" {
 		s = fmt.Sprintf(": %s", service[0])
 	}
 	return PushSlackf("*`%s` 部署成功* :stars: \n\n> 应用 `%s` \n\n ```%s```", logger,
