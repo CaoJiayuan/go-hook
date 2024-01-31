@@ -15,6 +15,5 @@ mac:
 copy:
 	cp email.temp.html build
 	cp .env.example build/env.example
-	cp .env build/.env
 pack:
 	tar -czf build/hook.tar.gz build/*

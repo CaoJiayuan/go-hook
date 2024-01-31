@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/smtp"
 	"os"
@@ -200,8 +199,8 @@ func handleGitDeploy(dir []byte, logger *log.Logger) bool {
 
 func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 	if len(dir) > 0 {
-		logger.Println(fmt.Sprintf("git [%s] compose", dir))
-		fmt.Println(fmt.Sprintf("git [%s] compose", dir))
+		logger.Println(fmt.Sprintf("deploy [%s] compose", dir))
+		fmt.Println(fmt.Sprintf("deploy [%s] compose", dir))
 		var commands = []string{}
 
 		if len(service) > 0 {
@@ -228,10 +227,38 @@ func handleComposeDeploy(dir []byte, logger *log.Logger, service []byte) bool {
 	return false
 }
 
+func handleCompose2Deploy(dir []byte, logger *log.Logger, service []byte) bool {
+	if len(dir) > 0 {
+		logger.Println(fmt.Sprintf("deploy [%s] compose2", dir))
+		fmt.Println(fmt.Sprintf("deploy [%s] compose2", dir))
+		var commands = []string{}
+
+		if len(service) > 0 {
+			srv := string(service)
+			commands = []string{
+				"docker compose pull " + srv,
+			}
+		} else {
+			commands = []string{
+				"docker compose pull",
+			}
+		}
+		commands = append(commands, "docker compose down")
+		commands = append(commands, "docker compose up -d")
+		commands = append(commands, "docker system prune --force")
+		s := string(dir)
+		result := execCommands(s, commands, logger)
+		go sendEmail(s, commands, logger)
+		<-DeploySuccessSlack(s, commands, logger, string(service))
+		return result
+	}
+	return false
+}
+
 func handleLaravelDeploy(dir []byte, logger *log.Logger, extra []byte) bool {
 	if len(dir) > 0 {
-		logger.Println(fmt.Sprintf("laravel [%s] deploy", dir))
-		fmt.Println(fmt.Sprintf("laravel [%s] deploy", dir))
+		logger.Printf("laravel [%s] deploy\n", dir)
+		fmt.Printf("laravel [%s] deploy\n", dir)
 
 		composerPath := os.Getenv("COMPOSER_PATH")
 
@@ -371,7 +398,7 @@ func getPidFile() string {
 	return pidFile
 }
 func getPid() (int, error) {
-	data, err := ioutil.ReadFile(getPidFile())
+	data, err := os.ReadFile(getPidFile())
 
 	if err != nil {
 		return 0, err
@@ -462,6 +489,11 @@ func start(logger *log.Logger, dir string) {
 					q.Push(func(logger *log.Logger) bool {
 						return handleComposeDeploy(dir, logger, service)
 					})
+				case "compose2":
+					service := query.Peek("service")
+					q.Push(func(logger *log.Logger) bool {
+						return handleCompose2Deploy(dir, logger, service)
+					})
 				}
 			}
 			fmt.Fprint(ctx, "OK")
@@ -487,7 +519,7 @@ func stopProcess() error {
 	if pid > 0 {
 		syscall.Kill(pid, syscall.SIGTERM)
 		syscall.Unlink(getPidFile())
-		fmt.Println(fmt.Sprintf("Hook process[%d] killed", pid))
+		fmt.Printf("Hook process[%d] killed\n", pid)
 	} else {
 		fmt.Println(err)
 	}
